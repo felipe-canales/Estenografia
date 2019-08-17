@@ -15,7 +15,4 @@ def imread(filename, as_gray = False):
     return image
 
 def imsave(filename, array):
-    if filename[-3:] == "jpg" or filename[-4:] == "jpeg":
-        skio.imsave(filename, array, quality = 100)
-    else:
-        skio.imsave(filename, array)
+    skio.imsave(filename, array)
