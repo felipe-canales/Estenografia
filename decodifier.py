@@ -24,6 +24,7 @@ class Decodifier:
         self._img = img
         self._color = color
         self._nbits = nbits
+        self._encoding = "ASCII"
 
     def decode(self):
         """
@@ -45,7 +46,7 @@ class Decodifier:
                             bits = int(bits/256)
                             bitQ -= 8
                             if text[-1] == 0:
-                                return bytes(text[:-1]).decode('ASCII')
+                                return bytes(text[:-1]).decode(self._encoding)
         else:
             for x in range(dims[0]):
                 for y in range(1, dims[1]):
@@ -56,7 +57,7 @@ class Decodifier:
                         bits = int(bits/256)
                         bitQ -= 8
                         if text[-1] == 0:
-                            return bytes(text[:-1]).decode('ASCII')
+                            return bytes(text[:-1]).decode(self._encoding)
 
     def encode(self, text):
         """
