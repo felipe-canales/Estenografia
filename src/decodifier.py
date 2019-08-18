@@ -25,6 +25,7 @@ class Decodifier:
         self._color = color
         self._nbits = nbits
         self._encoding = "ASCII"
+        self._cur = (0, 0, 0)
 
     def decode(self):
         """
@@ -113,3 +114,39 @@ class Decodifier:
                         return self._img
         print("Error: Not enough space for text. Try using more bits per pixel or a bigger image.")
         return self._img
+
+    def _next(self):
+        x, y, z = self._cur 
+        if self._color:
+            dims = (self._img.shape[0], self._img.shape[1], 1)
+        else:
+            dims = self._img.shape
+        z += 1
+        if z == dims[2]:
+            y, z = y + 1, 0
+            if y == dims[1]:
+                x, y = x + 1, 0
+        self._cur = (x, y, z)
+
+    def _hasNext(self):
+        return self._cur[0] < self._img.shape[0]
+
+    def _insert(self, buffer, bitMask):
+        x, y, z = self._cur
+        if self._color:
+            data = self._img[x][y][z]
+        else:
+            data = self._img[x][y]
+        data = (data & (255 - bitMask)) + (bitMask & buffer)
+        if self._color:
+            self._img[x][y][z] = data
+        else:
+            self._img[x][y] = data
+        
+    def _extract(self, bitMask):
+        x, y, z = self._cur
+        if self._color:
+            data = self._img[x][y][z]
+        else:
+            data = self._img[x][y]
+        return data & bitMask
