@@ -27,38 +27,28 @@ class Decodifier:
         self._encoding = "ASCII"
         self._cur = (0, 0, 0)
 
+
     def decode(self):
         """
         Returns the text from decoding the image 
         """
-        dims = self._img.shape
         bits = 0
         bitQ = 0
         mask = 2**self._nbits - 1
         text = []
-        if self._color:
-            for x in range(dims[0]):
-                for y in range(1, dims[1]):
-                    for z in range(dims[2]):
-                        bits += 2**bitQ * (self._img[x][y][z] & mask)
-                        bitQ += self._nbits
-                        if bitQ > 8:
-                            text.append(bits % 256)
-                            bits = int(bits/256)
-                            bitQ -= 8
-                            if text[-1] == 0:
-                                return bytes(text[:-1]).decode(self._encoding)
-        else:
-            for x in range(dims[0]):
-                for y in range(1, dims[1]):
-                    bits += 2**bitQ * (self._img[x][y] & mask)
-                    bitQ += self._nbits
-                    if bitQ > 8:
-                        text.append(bits % 256)
-                        bits = int(bits/256)
-                        bitQ -= 8
-                        if text[-1] == 0:
-                            return bytes(text[:-1]).decode(self._encoding)
+        self._next()
+        while self._hasNext():
+            bits += 2**bitQ * self._extract(mask)
+            bitQ += self._nbits
+            self._next()
+            if bitQ > 8:
+                text.append(bits % 256)
+                bits = int(bits/256)
+                bitQ -= 8
+                if text[-1] == 0:
+                    return bytes(text[:-1]).decode(self._encoding)
+        return bytes(text[:-1]).decode(self._encoding)
+        
 
     def encode(self, text):
         """
@@ -77,50 +67,32 @@ class Decodifier:
         c = 0
         bits = 0
         bitQ = 0
-        if self._color:
-            self._img[0][0][0] = (self._img[0][0][0] & 248) + self._nbits - 1
-            for x in range(dims[0]):
-                for y in range(1, dims[1]):
-                    for z in range(dims[2]):
-                        if bitQ < self._nbits:
-                            try:
-                                t = txtbytes[c]
-                                bits += 2**bitQ * t
-                                c += 1
-                                bitQ += 8
-                            except:
-                                finished = True
-                        self._img[x][y][z] = (self._img[x][y][z] & (255 - mask)) + (mask & bits)
-                        bits = int(bits / (mask + 1))
-                        bitQ -= self._nbits
-                        if finished:
-                            return self._img
-        else:
-            self._img[0][0] = (self._img[0][0] & 248) + self._nbits - 1
-            for x in range(dims[0]):
-                for y in range(1, dims[1]):
-                    if bitQ < self._nbits:
-                        try:
-                            t = txtbytes[c]
-                            bits += 2**bitQ * t
-                            c += 1
-                            bitQ += 8
-                        except:
-                            finished = True
-                    self._img[x][y] = (self._img[x][y] & (255 - mask)) + (mask & bits)
-                    bits = int(bits / (mask + 1))
-                    bitQ -= self._nbits
-                    if finished:
-                        return self._img
-        print("Error: Not enough space for text. Try using more bits per pixel or a bigger image.")
-        return self._img
+        self._insert(self._nbits - 1, 7)
+        self._next()
+        while self._hasNext():
+            if bitQ < self._nbits:
+                try:
+                    t = txtbytes[c]
+                    bits += 2**bitQ * t
+                    c += 1
+                    bitQ += 8
+                except:
+                    finished = True
+            self._insert(bits, mask)
+            bits = int(bits / (mask + 1))
+            bitQ -= self._nbits
+            if finished:
+                return self._img
+            self._next()
+        raise AttributeError("Not enough space for text. Try using more bits per pixel or a bigger image.")
+
 
     def _next(self):
         x, y, z = self._cur 
         if self._color:
-            dims = (self._img.shape[0], self._img.shape[1], 1)
-        else:
             dims = self._img.shape
+        else:
+            dims = (self._img.shape[0], self._img.shape[1], 1)
         z += 1
         if z == dims[2]:
             y, z = y + 1, 0
